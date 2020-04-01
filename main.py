@@ -1,16 +1,17 @@
 import random
-import math
+
 
 class TicTacToeGame:
 
     def __init__(self, player1, player2):
 
         self.field = ["O", "1", "X", "X", "4", "X", "6", "O", "O"]  # Игровое поле
-        self.current_player = "X"  # Следующий игрок
+        self.current_player = "X"  # Текущий игрок
         self.winner = ""  # Победитель
         self.state = "run"  # Статус игры (run, draw, win)
-        self.counter = {"X": 0, "O": 0, "empty": 3}
+        self.counter = {"X": 3, "O": 3, "empty": 3}
         self.players = {"X": player1, "O": player2}
+
         self.victory_options = []
 
         # по горизонтали
@@ -50,29 +51,35 @@ class TicTacToeGame:
 
         print("---------")
 
-    def find_current_player(self):  # Определяет текущего игрока
+    def set_current_player(self):  # Определяет текущего игрока при смене хода
 
         if self.counter["O"] < self.counter["X"]:
             self.current_player = "O"
         else:
             self.current_player = "X"
 
-    def cell_is_free(self, cell):
+    def cell_is_free(self, cell):  # Определяет свободная ли клетка
 
         value = self.field[cell]
         return value != "X" and value != "O"
 
-    def random_move(self):
+    def get_empty_cells(self, board):  # Возвращает список пустых клеток
 
         result = []
         for i in range(0, 9):
 
-            if self.field[i] != "X" and self.field[i] != "O":
+            if board[i] != "X" and board[i] != "O":
                 result.append(i)
+
+        return result
+
+    def random_move(self):  # Выбор случайного хода из пустых клеток
+
+        result = self.get_empty_cells(self.field)
 
         return random.choice(result)
 
-    def human_move(self):
+    def human_move(self):  # выбор хода человеком
 
         cells = {"1 1": 6, "1 2": 3, "1 3": 0, "2 1": 7, "2 2": 4, "2 3": 1, "3 1": 8, "3 2": 5, "3 3": 2}
 
@@ -103,12 +110,14 @@ class TicTacToeGame:
 
         return new_coordinates
 
-    def computer_move(self, type_player):
+    def computer_move(self, type_player):  # выбор хода компьютером
 
         print(f'Making move level "{type_player}"')
 
         if type_player == "easy":
+
             return self.random_move()
+
         elif type_player == "medium":
 
             target_cell = ""
@@ -123,25 +132,34 @@ class TicTacToeGame:
             else:
                 return int(target_cell)
 
-    def check_after_move(self):
+        elif type_player == "hard":
 
-        player = self.current_player
+            mm = self.minimax(self.field, self.current_player)
+            return int(mm["index"])
+
+    def get_winner(self, board, player):  # Возвращает победителя или пустую строку
 
         # Проверяем выигрыш: по-горизонтали, по-вертикали, по-диагонали сверху вниз и снизу вверх
-        if (self.field[0] == player and self.field[1] == player and self.field[2] == player) or \
-                (self.field[3] == player and self.field[4] == player and self.field[5] == player) or \
-                (self.field[6] == player and self.field[7] == player and self.field[8] == player) or \
-                (self.field[0] == player and self.field[3] == player and self.field[6] == player) or \
-                (self.field[1] == player and self.field[4] == player and self.field[7] == player) or \
-                (self.field[2] == player and self.field[5] == player and self.field[8] == player) or \
-                (self.field[0] == player and self.field[4] == player and self.field[8] == player) or \
-                (self.field[2] == player and self.field[4] == player and self.field[6] == player):
-            self.winner = self.current_player
+        if (board[0] == player and board[1] == player and board[2] == player) or \
+                (board[3] == player and board[4] == player and board[5] == player) or \
+                (board[6] == player and board[7] == player and board[8] == player) or \
+                (board[0] == player and board[3] == player and board[6] == player) or \
+                (board[1] == player and board[4] == player and board[7] == player) or \
+                (board[2] == player and board[5] == player and board[8] == player) or \
+                (board[0] == player and board[4] == player and board[8] == player) or \
+                (board[2] == player and board[4] == player and board[6] == player):
+            return player
+        else:
+            return ""
+
+    def check_after_move(self):  # Обновление параметров после хода игрока
+
+        self.winner = self.get_winner(self.field, self.current_player)
 
         # Обновляем счетчики и параметры
         self.counter[self.current_player] += 1
         self.counter["empty"] -= 1
-        self.find_current_player()
+        self.set_current_player()
 
         # Анализируем результат игры
         if self.winner != "":
@@ -151,7 +169,7 @@ class TicTacToeGame:
             self.state = "draw"
             print("Draw")
 
-    def action(self):
+    def action(self):  # Обработка хода игрока
 
         while self.state == "run":
 
@@ -167,7 +185,54 @@ class TicTacToeGame:
 
             self.check_after_move()
 
+    def minimax(self, new_board, player):  # Возвращает наилучший ход из возможных
 
-new_game = TicTacToeGame("medium", "easy")
+        avail_spots = self.get_empty_cells(new_board)
+
+        another_player = "O" if self.current_player == "X" else "X"
+
+        if self.get_winner(new_board, another_player) == another_player:
+            return {"score": -10}
+        elif self.get_winner(new_board, self.current_player) == self.current_player:
+            return {"score": 10}
+        elif len(avail_spots) == 0:
+            return {"score": 0}
+
+        moves = []
+
+        for i in range(0, len(avail_spots)):
+            move = {}
+            move["index"] = new_board[avail_spots[i]]
+            new_board[avail_spots[i]] = player
+
+            if player == self.current_player:
+                result = self.minimax(new_board, another_player)
+                move["score"] = result["score"]
+            else:
+                result = self.minimax(new_board, self.current_player)
+                move["score"] = result["score"]
+
+            new_board[avail_spots[i]] = move["index"]
+            moves.append(move)
+
+        best_move = 0
+        if player == self.current_player:
+            best_score = -10000
+            for i in range(0, len(moves)):
+                if moves[i]["score"] > best_score:
+                    best_score = moves[i]["score"]
+                    best_move = i
+        else:
+            best_score = 10000
+            for i in range(0, len(moves)):
+                if moves[i]["score"] < best_score:
+                    best_score = moves[i]["score"]
+                    best_move = i
+
+        return moves[best_move]
+
+
+new_game = TicTacToeGame("hard", "easy")
 new_game.print_field()
 new_game.action()
+
